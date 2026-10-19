@@ -4,7 +4,7 @@
  * 
  * Authors:
  *   1. Simon Ratcliffe, in collaboration with GPT-5.6 Terra
- *   2. <student name and student number insert here upon modification>
+ *   2. Name: Ishan Soni  Student ID: A2980941
  *
  * Copyright 2026 Simon Ratcliffe
  */
@@ -124,5 +124,22 @@ public class CommandLineController {
         System.out.println("  -x, --maximise     Open the player maximised");
         System.out.println("  -1, --monitor-1    Open the player on display 1");
         System.out.println("  -2, --monitor-2    Open the player on display 2");
+        System.out.println();
+        System.out.println("Frame Processors: ");
+        System.out.println(" -n, --number-frames  Render the frame onto each frame");
+        System.out.println(" -s, --scratch-frames  Render vertical film scratches");
+        System.out.println(" -f,  --flicker-frames  Randomly dim frames");
+        System.out.println(" -w,  --black-and-white  Convert frames to black and white");
+        System.out.println(" -y,  --yellow-frames  Apply a warmer colour temp");
+        System.out.println(" -v,  --vignette-frames  Darken the frame edges");
+        System.out.println(" -d,  --dust-frames  Render dust and hair marks");
+        System.out.println(" -j,  --jitter-frames  Randomly displace frames by a few pixels");
+        System.out.println(" -m,  --mottle-frames  Add cloudly emulsion mottling");
+        System.out.println(" -b,  --bleed-frames  Bleed light into frames");
+        System.out.println(" -p,  --pepper-frames  Pepper frames with dark Spots");
+        System.out.println();
+        System.out.println("Frame processors are applied in command line order and can be repeated");
+        System.out.println("Example : -nssnfwyvdjmbp numbers, scratches twice, numbers again, flickers,");
+        System.out.println("converts,warms, vignettes, dusts,jitters, mottles,bleeds, then peppers");
     }
 }
