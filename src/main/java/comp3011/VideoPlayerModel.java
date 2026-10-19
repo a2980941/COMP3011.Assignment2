@@ -217,7 +217,7 @@ public class VideoPlayerModel {
         }
     }
 
-    private void startProcessingPipeline() {
+    private void startProcessingPipeline(long generation) {
         pipelineQueues.clear();
 
         for (int index = 0; index <= frameProcessors.size(); index++) {
@@ -240,8 +240,48 @@ public class VideoPlayerModel {
                     pipelineRunning,
                     exception -> Platform.runLater(() -> handlePlaybackError(exception))));
         }
+        pipelineExecutor.submit(() -> decodeFrames(generation));
     }
 
+    private void decodeFrames(long generation) {
+        try {
+            while (pipelineRunning.get()
+                    && generation == playbackGeneration.get()) {
+                Frame frame = grabFrame();
+
+                if (frame == null) {
+                    Platform.runLater(this::finishPlayback);
+                    return;
+                }
+                
+                if (frame.image == null) {
+                    continue;
+                }
+                if (!frameProcessorsInitialised) {
+                    initialiseFrameProcessors(new InfoVideo(mediaName(videoFile),totalVideoFrames,frame.imageWidth,frame.imageHeight,frame.imageDepth,frame.imageChannels,frame.imageStride,frameRate,intFrameRate,videoFrameDurationUs,grabber.getPixelFormat()));frameProcessorsInitialised = true;}
+
+
+                long timestampUs = grabber.getTimestamp();
+                InfoFrame info = new InfoFrame(
+                        grabber.getFrameNumber(),
+                        timestampUs);
+
+                DecodedFrame decodedFrame = new DecodedFrame(
+                        generation,
+                        frame.clone(),
+                        info);
+
+                pipelineQueues.get(0).put(decodedFrame);
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        } catch (Exception exception) {
+            if (pipelineRunning.get()) {
+                Platform.runLater(() -> handlePlaybackError(exception));
+            }
+        }
+    }
+    
     private void stopProcessingPipeline() {
         pipelineRunning.set(false);
 
@@ -277,8 +317,10 @@ public class VideoPlayerModel {
             openPlaybackResources(startTimestampUs);
             resetPlaybackClock(currentTimestampUs);
             playbackOpen = true;
+            long generation = playbackGeneration.incrementAndGet();
+            startProcessingPipeline(generation);
             playbackTimer.start();
-            prepareNextFrame();
+
             notifyPlaybackStateChanged();
         } catch (Exception e) {
             handlePlaybackError(e);
@@ -334,17 +376,38 @@ public class VideoPlayerModel {
         }
         pauseStartedNs = 0;
     }
-
     private void prepareNextFrame() {
-        if (!playbackOpen || preparedFrame != null) {
+        if (!playbackOpen || preparedFrame != null || pipelineQueues.isEmpty()) {
             return;
         }
-
-        try {
-            preparedFrame = readNextVideoFrame();
-        } catch (Exception e) {
-            handlePlaybackError(e);
+        DecodedFrame decodedFrame = pipelineQueues
+                .get(pipelineQueues.size() - 1)
+                .poll();
+        if (decodedFrame == null
+                || decodedFrame.playbackGeneration() != playbackGeneration.get()) {
+            return;
         }
+        long timestampUs = decodedFrame.info().timestampUs();
+
+        if (firstTimestampUs == NO_SEEK_REQUEST) {
+            firstTimestampUs = timestampUs;
+            playbackStartNs = System.nanoTime();
+            if (pauseRequested) {
+                pauseStartedNs = playbackStartNs;
+            }
+        }
+        long relativeTimestampUs = Math.max(0, timestampUs - firstTimestampUs);
+        long logicalTimestampUs = logicalPlaybackBaseUs + relativeTimestampUs;
+        long targetTimeNs = playbackStartNs + relativeTimestampUs * 1_000L;
+        Image image = converter.convert(decodedFrame.frame());
+
+        preparedFrame = new PreparedFrame(
+                image,
+                decodedFrame.info().frameNumber(),
+                timestampUs,
+                logicalTimestampUs,
+                targetTimeNs,
+                System.nanoTime());
     }
 
     private PreparedFrame readNextVideoFrame() throws Exception {
@@ -420,29 +483,14 @@ public class VideoPlayerModel {
             return;
         }
 
-        // Task (1)
         writeDueAudio(now);
 
-        // Task (2)
         if (preparedFrame != null && preparedFrame.targetTimeNs() <= now) {
-            // We have a prepared frame ready to go and it is due (or just past due!) so get it up on screen ASAP!
             displayPreparedFrame(now);
         }
 
-        // Task (3). We'll try and be nice to the GUI event loop here by queueing the prepareNextFrame call rather than
-        // hogging the thread and doing it here, hence the tricky callback and use of prepareNextFrameQueued. Feel free
-        // to replace this whole block with simple linear control flow logic
-        // such as: if (!pauseRequested && preparedFrame == null) prepareNextFrame();
-        // to compare.
-        if (!pauseRequested && preparedFrame == null && !prepareNextFrameQueued) {
-            prepareNextFrameQueued = true;
-            Platform.runLater(() -> {
-                prepareNextFrameQueued = false;
-
-                if (!pauseRequested) {
-                    prepareNextFrame();
-                }
-            });
+        if (!pauseRequested && preparedFrame == null) {
+            prepareNextFrame();
         }
     }
 
