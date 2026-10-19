@@ -32,6 +32,7 @@ public class CommandLineController {
     private Integer displayId;
     private File videoFile;
     private String errorMessage;
+    private final List<FrameProcessor> frameProcessors = new ArrayList<>();
 
     public CommandLineController(String[] args) {
         this.args = args.clone();
@@ -46,6 +47,9 @@ public class CommandLineController {
 
     public File getVideoFile() {
         return videoFile;
+    }
+    public List<FrameProcessor> getFrameProcessors() {
+        return List.copyOf(frameProcessors);
     }
 
     public String getErrorMessage() {
@@ -107,6 +111,23 @@ public class CommandLineController {
         }
     }
 
+    private FrameProcessor createFrameProcessor(String option) {
+        return switch (option) {
+            case "-n", "--number-frames" -> new FrameNumberer();
+            case "-s", "--scratch-frames" -> new FrameScratcher();
+            case "-f", "--flicker-frames" -> new FrameFlickerer();
+            case "-w", "--black-and-white" -> new FrameBlackAndWhiter();
+            case "-y", "--yellow-frames" -> new FrameYellower();
+            case "-v", "--vignette-frames" -> new FrameVignetter();
+            case "-d", "--dust-frames" -> new FrameDuster();
+            case "-j", "--jitter-frames" -> new FrameJitterer();
+            case "-m", "--mottle-frames" -> new FrameMottler();
+            case "-b", "--bleed-frames" -> new FrameBleeder();
+            case "-p", "--pepper-frames" -> new FramePepperer();
+            default -> null;
+        };
+    }
+    
     private void setDisplayId(int displayId) {
         if (this.displayId != null && this.displayId != displayId) {
             errorMessage = "Only one display option can be used";
