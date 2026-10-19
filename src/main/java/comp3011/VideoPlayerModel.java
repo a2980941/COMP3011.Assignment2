@@ -9,14 +9,13 @@
  * Copyright 2026 Simon Ratcliffe
  */
 package comp3011;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.BiConsumer;
@@ -56,7 +55,7 @@ public class VideoPlayerModel {
     private final AtomicBoolean pipelineRunning = new AtomicBoolean();
     private final List<BlockingQueue<DecodedFrame>> pipelineQueues = new ArrayList<>();
     private ExecutorService pipelineExecutor;
-    private final Queue<PendingAudio> pendingAudio = new ArrayDeque<>();
+    private final Queue<PendingAudio> pendingAudio = new ConcurrentLinkedQueue<>();
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
     private final Consumer<Image> frameReadyHandler;
     private final Consumer<String> statusChangedHandler;
@@ -240,6 +239,11 @@ public class VideoPlayerModel {
                     Platform.runLater(this::finishPlayback);
                     return;
                 }
+                long timestampUs = grabber.getTimestamp();
+
+                if (audioAvailable && frame.samples != null) {
+                    queueAudio(timestampUs, frame);
+                }
                 
                 if (frame.image == null) {
                     continue;
@@ -247,8 +251,6 @@ public class VideoPlayerModel {
                 if (!frameProcessorsInitialised) {
                     initialiseFrameProcessors(new InfoVideo(mediaName(videoFile),totalVideoFrames,frame.imageWidth,frame.imageHeight,frame.imageDepth,frame.imageChannels,frame.imageStride,frameRate,intFrameRate,videoFrameDurationUs,grabber.getPixelFormat()));frameProcessorsInitialised = true;}
 
-
-                long timestampUs = grabber.getTimestamp();
                 InfoFrame info = new InfoFrame(
                         grabber.getFrameNumber(),
                         timestampUs);
