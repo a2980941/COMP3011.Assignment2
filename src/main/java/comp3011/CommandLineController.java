@@ -76,6 +76,32 @@ public class CommandLineController {
         return errorMessage == null && videoFile != null;
     }
 
+    private boolean addFrameProcessors(String option) {
+        FrameProcessor processor = createFrameProcessor(option);
+        if (processor != null) {
+            frameProcessors.add(processor);
+            return true;
+        }
+        if (!option.startsWith("-") || option.startsWith("--")) {
+            return false;
+        }
+        List<FrameProcessor> parsedProcessors = new ArrayList<>(); 
+        for (int index = 1; index < option.length(); index++) {
+            String shortOption = "-" + option.charAt(index);
+            processor = createFrameProcessor(shortOption);
+
+            if (processor == null) {
+                return false;
+            }
+            parsedProcessors.add(processor);
+        }
+        if (parsedProcessors.isEmpty()) {
+            return false;
+        }
+        frameProcessors.addAll(parsedProcessors);
+        return true;
+    }
+   
     private void parse() {
         List<String> videoFiles = new ArrayList<>();
         for (String arg : args) {
@@ -90,7 +116,9 @@ public class CommandLineController {
             } else if ("-2".equals(arg) || "--monitor-2".equals(arg)) {
                 setDisplayId(2);
             } else if (arg.startsWith("-")) {
-                errorMessage = "Unknown option: " + arg;
+                if (!addFrameProcessors(arg)) {
+                    errorMessage = "Unknown option: " + arg;
+                }
             } else {
                 videoFiles.add(arg);
             }
