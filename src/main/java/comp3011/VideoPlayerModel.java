@@ -10,13 +10,18 @@
  */
 package comp3011;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
+import java.util.ArrayList;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
@@ -25,6 +30,8 @@ import org.bytedeco.javacv.JavaFXFrameConverter;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.image.Image;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The model part of the video player model-view-controller architecture.
@@ -41,8 +48,14 @@ public class VideoPlayerModel {
     private static final long NO_SEEK_REQUEST = -1; // Sentinel value used when no seek position is active.
     private static final long FIVE_SECONDS_US = 5_000_000L;
     private static final long AUDIO_LEAD_NS = 30_000_000L;
+    private static final int PIPELINE_QUEUE_CAPACITY = 2;
+    private static final long PIPELINE_SHUTDOWN_TIMEOUT_SECONDS = 1;
 
     private final List<FrameProcessor> frameProcessors;
+    private final AtomicLong playbackGeneration = new AtomicLong();
+    private final AtomicBoolean pipelineRunning = new AtomicBoolean();
+    private final List<BlockingQueue<DecodedFrame>> pipelineQueues = new ArrayList<>();
+    private ExecutorService pipelineExecutor;
     private final Queue<PendingAudio> pendingAudio = new ArrayDeque<>();
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
     private final Consumer<Image> frameReadyHandler;
@@ -204,6 +217,51 @@ public class VideoPlayerModel {
         }
     }
 
+    private void startProcessingPipeline() {
+        pipelineQueues.clear();
+
+        for (int index = 0; index <= frameProcessors.size(); index++) {
+            pipelineQueues.add(new ArrayBlockingQueue<>(PIPELINE_QUEUE_CAPACITY));
+        }
+
+        pipelineRunning.set(true);
+        pipelineExecutor = Executors.newFixedThreadPool(
+                Math.max(1, frameProcessors.size() + 1));
+
+        for (int index = 0; index < frameProcessors.size(); index++) {
+            BlockingQueue<DecodedFrame> inputQueue = pipelineQueues.get(index);
+            BlockingQueue<DecodedFrame> outputQueue = pipelineQueues.get(index + 1);
+            FrameProcessor processor = frameProcessors.get(index);
+
+            pipelineExecutor.submit(new FrameProcessingStage(
+                    processor,
+                    inputQueue,
+                    outputQueue,
+                    pipelineRunning,
+                    exception -> Platform.runLater(() -> handlePlaybackError(exception))));
+        }
+    }
+
+    private void stopProcessingPipeline() {
+        pipelineRunning.set(false);
+
+        ExecutorService executor = pipelineExecutor;
+        pipelineExecutor = null;
+
+        if (executor != null) {
+            executor.shutdownNow();
+
+            try {
+                executor.awaitTermination(
+                        PIPELINE_SHUTDOWN_TIMEOUT_SECONDS,
+                        TimeUnit.SECONDS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        pipelineQueues.clear();
+    }
     private void startPlayback(long startTimestampUs, boolean initiallyPaused, long initialRelativeSeekBaseUs) {
         closePlaybackResources();
 
@@ -475,6 +533,7 @@ public class VideoPlayerModel {
     }
 
     private void closePlaybackResources() {
+    	stopProcessingPipeline();
         playbackTimer.stop();
         playbackOpen = false;
         preparedFrame = null;
