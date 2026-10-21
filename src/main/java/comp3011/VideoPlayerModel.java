@@ -236,7 +236,7 @@ public class VideoPlayerModel {
                 Frame frame = grabFrame();
 
                 if (frame == null) {
-                    Platform.runLater(this::finishPlayback);
+                    pipelineQueues.get(0).put(DecodedFrame.endOfStream(generation));
                     return;
                 }
                 long timestampUs = grabber.getTimestamp();
@@ -376,6 +376,12 @@ public class VideoPlayerModel {
                 || decodedFrame.playbackGeneration() != playbackGeneration.get()) {
             return;
         }
+
+        if (decodedFrame.isEndOfStream()) {
+            finishPlayback();
+            return;
+        }
+
         long timestampUs = decodedFrame.info().timestampUs();
 
         if (firstTimestampUs == NO_SEEK_REQUEST) {
