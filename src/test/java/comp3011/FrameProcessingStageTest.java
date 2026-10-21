@@ -42,4 +42,35 @@ class FrameProcessingStageTest {
         assertNull(error.get());
         assertFalse(thread.isAlive());
     }
+    @Test
+    void processesFramesBeforeForwardingEndOfStream() throws Exception {
+        BlockingQueue<DecodedFrame> inputQueue = new ArrayBlockingQueue<>(2);
+        BlockingQueue<DecodedFrame> outputQueue = new ArrayBlockingQueue<>(2);
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicInteger processedFrames = new AtomicInteger();
+        AtomicReference<Exception> error = new AtomicReference<>();
+
+        FrameProcessor processor = new FrameProcessor() {
+            @Override
+            public void process(Frame frame, InfoFrame info) {
+                processedFrames.incrementAndGet();
+            }
+        };
+        FrameProcessingStage stage = new FrameProcessingStage(processor,inputQueue,outputQueue,running,error::set);
+
+        Thread thread = new Thread(stage);
+        thread.start();
+        DecodedFrame frame = new DecodedFrame(7, new Frame(), new InfoFrame(1, 1_000));
+        DecodedFrame marker = DecodedFrame.endOfStream(7);
+        inputQueue.put(frame);
+        inputQueue.put(marker);
+        DecodedFrame firstResult = outputQueue.poll(1, TimeUnit.SECONDS);
+        DecodedFrame secondResult = outputQueue.poll(1, TimeUnit.SECONDS);
+        thread.join(1_000);
+        assertSame(frame, firstResult);
+        assertSame(marker, secondResult);
+        assertEquals(1, processedFrames.get());
+        assertNull(error.get());
+        assertFalse(thread.isAlive());
+    }
 }
