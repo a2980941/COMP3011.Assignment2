@@ -10,4 +10,10 @@ public record DecodedFrame (
 	long playbackGeneration,
 	Frame frame,
 	InfoFrame info) {
+	public static DecodedFrame endOfStream(long generation) {
+		return new DecodedFrame(generation,null,null);
+	}
+	public boolean isEndOfStream() {
+		return frame ==null;
+	}
 }

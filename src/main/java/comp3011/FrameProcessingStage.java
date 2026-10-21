@@ -39,6 +39,10 @@ public final class FrameProcessingStage implements Runnable{
                 if (decodedFrame == null) {
                     continue;
                 }
+                if(decodedFrame.isEndOfStream()) {
+                	outputQueue.put(decodedFrame);
+                	return;
+                }
                 processor.process(decodedFrame.frame(), decodedFrame.info());
                 outputQueue.put(decodedFrame);
             }
