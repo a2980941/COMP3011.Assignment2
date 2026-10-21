@@ -73,4 +73,27 @@ class FrameProcessingStageTest {
         assertNull(error.get());
         assertFalse(thread.isAlive());
     }
+    @Test
+    void stopsAndReportsProcessorFailure() throws Exception {
+        BlockingQueue<DecodedFrame> inputQueue = new ArrayBlockingQueue<>(1);
+        BlockingQueue<DecodedFrame> outputQueue = new ArrayBlockingQueue<>(1);
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicReference<Exception> error = new AtomicReference<>();
+        RuntimeException expected = new RuntimeException("processor failed");
+        FrameProcessor processor = new FrameProcessor() {
+            @Override
+            public void process(Frame frame, InfoFrame info) {
+                throw expected;
+            }
+        };
+        FrameProcessingStage stage = new FrameProcessingStage(processor,inputQueue,outputQueue,running,error::set);
+        Thread thread = new Thread(stage);
+        thread.start();
+        inputQueue.put(new DecodedFrame(7, new Frame(), new InfoFrame(1, 1_000)));
+        thread.join(1_000);
+        assertSame(expected, error.get());
+        assertFalse(running.get());
+        assertFalse(thread.isAlive());
+        assertNull(outputQueue.poll());
+    }
 }
