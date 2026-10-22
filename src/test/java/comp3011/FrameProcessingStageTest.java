@@ -1,5 +1,8 @@
 package comp3011;
-
+/**
+ * Verifies FIFO processing , end of stream forwardingm, thread termination and failiure reporting for a frame processing stage
+ * Developed with ai guidance. This work is my own 
+ */
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;

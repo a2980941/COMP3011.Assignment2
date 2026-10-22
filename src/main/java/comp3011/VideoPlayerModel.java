@@ -43,6 +43,12 @@ import java.util.concurrent.TimeUnit;
  * decoupled from the JavaFX view.
  * </p>
  */
+
+/**
+ * Put playback into a bounded multi threaded pipeline with a decoder
+ * ordered effect stages, JavaFX display scheduling, audio handoff,seeking shutdown and end-of-stream coordination
+ * Developed with Ai guidance. This work is my own
+ */
 public class VideoPlayerModel {
     private static final long NO_SEEK_REQUEST = -1; // Sentinel value used when no seek position is active.
     private static final long FIVE_SECONDS_US = 5_000_000L;

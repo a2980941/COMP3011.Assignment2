@@ -23,6 +23,13 @@ import java.util.List;
  * {@link VideoPlayerApp}.
  * </p>
  */
+
+/**
+ * Change made by me:
+ * Added ordered command line parsing for all frame processor options, including long options, stacked short options, repeated effects and exact
+ * assignment required help text
+ * Developed with AI guidance. This work is my own
+ */
 public class CommandLineController {
     private final String[] args;
 

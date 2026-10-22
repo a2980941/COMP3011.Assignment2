@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 // frames enter from the input queue and are processed in FIFO order and leave through the output queue
 // one stage owns one frameProcesser instance so that processor is never used concurrently by different threads
 
+//Ai guidance was used in developing this. This work is my own
 
 public final class FrameProcessingStage implements Runnable{
 	private static final long POLL_TIMEOUT_MS = 100;

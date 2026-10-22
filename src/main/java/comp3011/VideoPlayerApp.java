@@ -30,6 +30,12 @@ import javafx.stage.Stage;
  * display to fit the selected screen.
  * </p>
  */
+
+
+/**
+ * Passes the parsed frame processor sequence from cli into the video player
+ * Developed with ai guidance. This work is my own
+ */
 public class VideoPlayerApp extends Application {
     private static CommandLineController commandLineController;
 

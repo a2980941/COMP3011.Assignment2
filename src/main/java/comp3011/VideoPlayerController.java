@@ -26,6 +26,11 @@ import javafx.scene.input.KeyEvent;
  * This includes button actions, keyboard shortcuts and display resizing.
  * </p>
  */
+
+/**
+ * Transfers the selected frame processor sequence from the application into the model while preserving the MVC ownership boundaries
+ * developed with ai guidance. This is my own work
+ */
 public class VideoPlayerController {
     private final VideoPlayerModel model;
     private final VideoPlayerView view;

@@ -1,5 +1,9 @@
 package comp3011;
 
+/**
+ * Regression tests for stacked, mixed, repeated and invalid frame processor cli options
+ * Developed with ai guidance. This work is my own 
+ */
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 

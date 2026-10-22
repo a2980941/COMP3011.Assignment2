@@ -6,6 +6,10 @@ import org.bytedeco.javacv.Frame;
 //one decoded video frame waiting for a processing worker
 // The frame pixels are mutable but after this object enters the processing queue exactly one worker owns and modifies that frame.
 
+
+/**
+ * Ai guidance was used in developing this. This is my own work
+ */
 public record DecodedFrame (
 	long playbackGeneration,
 	Frame frame,
