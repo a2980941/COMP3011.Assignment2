@@ -134,7 +134,15 @@ public class CommandLineController {
         if (videoFiles.size() > 1) {
             errorMessage = "Usage: VideoPlayer [options] [video-file]";
         } else if (videoFiles.size() == 1) {
-            videoFile = new File(videoFiles.get(0));
+        	String videoPath = videoFiles.get(0);
+
+        	if (videoPath.length() >= 2
+        	        && ((videoPath.startsWith("\"") && videoPath.endsWith("\""))
+        	        || (videoPath.startsWith("'") && videoPath.endsWith("'")))) {
+        	    videoPath = videoPath.substring(1, videoPath.length() - 1);
+        	}
+
+        	videoFile = new File(videoPath);
             if (!videoFile.isFile()) {
                 errorMessage = "File not found: " + videoFile.getPath();
                 videoFile = null;
