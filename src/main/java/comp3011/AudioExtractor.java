@@ -21,7 +21,7 @@ public class AudioExtractor {
             }
 
             try (FFmpegFrameRecorder recorder =
-                    new FFmpegFrameRecorder(audioFile, 1)) {
+            		new FFmpegFrameRecorder(audioFile, audioGrabber.getAudioChannels())) {
 
                 recorder.setFormat("wav");
                 recorder.setAudioCodec(avcodec.AV_CODEC_ID_PCM_S16LE);
