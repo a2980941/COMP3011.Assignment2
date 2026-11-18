@@ -72,7 +72,7 @@ public class VideoPlayerController {
                     }
                     System.out.println("Subtitles received: " + subtitleJson);
                 } finally {
-                    System.out.println("Audio saved for checking: " + audioPath);
+                    Files.deleteIfExists(audioPath);
                 }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
