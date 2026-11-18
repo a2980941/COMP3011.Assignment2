@@ -10,6 +10,7 @@
  */
 package comp3011;
 import java.util.List;
+
 import java.io.File;
 import java.util.function.BiConsumer;
 
@@ -17,7 +18,7 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-
+import java.nio.file.Files;
 /**
  * The controller part of the video player model-view-controller architecture.
  * 
@@ -35,8 +36,36 @@ public class VideoPlayerController {
     private final VideoPlayerModel model;
     private final VideoPlayerView view;
     private boolean subtitlesEnabled;
+    private Thread subtitleTask;
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
+    
+    private void prepareSubtitles(File videoFile) {
+        if (subtitleTask != null) {
+            subtitleTask.interrupt();
+        }
 
+        subtitleTask = Thread.ofVirtual().start(() -> {
+            try {
+                var audioPath = Files.createTempFile("subtitle-audio-", ".wav");
+
+                try {
+                	System.out.println("Starting audio extraction: " + videoFile.getAbsolutePath());
+                    new AudioExtractor().extract(videoFile, audioPath.toFile());
+                    System.out.println(
+                            "Audio extraction complete: "
+                            + Files.size(audioPath) + " bytes");
+                } finally {
+                    Files.deleteIfExists(audioPath);
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } catch (Exception exception) {
+                System.err.println(
+                        "Subtitle preparation failed: " + exception.getMessage());
+            }
+        });
+    }
+    
     public VideoPlayerController(
             boolean audioEnabled,
             List<FrameProcessor> frameProcessors,
@@ -100,9 +129,13 @@ public class VideoPlayerController {
     public void play(File file) {
         view.setPlaybackControlsDisabled(false);
         model.play(file);
+        prepareSubtitles(file);
     }
 
     public void shutdown() {
+        if (subtitleTask != null) {
+            subtitleTask.interrupt();
+        }
         model.shutdown();
     }
 
