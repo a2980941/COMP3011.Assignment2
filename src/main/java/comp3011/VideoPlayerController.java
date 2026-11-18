@@ -19,6 +19,7 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import java.nio.file.Files;
+import java.util.ArrayList;
 /**
  * The controller part of the video player model-view-controller architecture.
  * 
@@ -34,6 +35,7 @@ import java.nio.file.Files;
  */
 public class VideoPlayerController {
     private final VideoPlayerModel model;
+    private final List<FrameSubtitler> subtitleProcessors;
     private final VideoPlayerView view;
     private boolean subtitlesEnabled;
     private Thread subtitleTask;
@@ -56,6 +58,13 @@ public class VideoPlayerController {
                             + Files.size(audioPath) + " bytes");
                     String subtitleJson = new SubtitleClient().requestSubtitles(audioPath);
                     List<SubtitleCue> cues = new SubtitleParser().parse(subtitleJson);
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
+
+                    for (FrameSubtitler processor : subtitleProcessors) {
+                        processor.setCues(cues);
+                    }
 
                     System.out.println("Parsed " + cues.size() + " subtitle cues.");
                     for (SubtitleCue cue : cues) {
@@ -78,11 +87,24 @@ public class VideoPlayerController {
             boolean audioEnabled,
             List<FrameProcessor> frameProcessors,
             BiConsumer<Integer, Integer> videoSizeChangedHandler) {
-        this.view = new VideoPlayerView();
-        this.videoSizeChangedHandler = videoSizeChangedHandler;
+	        this.view = new VideoPlayerView();
+	        this.videoSizeChangedHandler = videoSizeChangedHandler;
+	        List<FrameProcessor> activeProcessors = new ArrayList<>(frameProcessors);
+	
+	        boolean hasSubtitleProcessor = activeProcessors.stream()
+	                .anyMatch(processor -> processor instanceof FrameSubtitler);
+	
+	        if (!hasSubtitleProcessor) {
+	            activeProcessors.add(new FrameSubtitler());
+	        }
+	
+	        subtitleProcessors = activeProcessors.stream()
+	                .filter(processor -> processor instanceof FrameSubtitler)
+	                .map(processor -> (FrameSubtitler) processor)
+	                .toList();
         model = new VideoPlayerModel(
                 audioEnabled,
-                frameProcessors,
+                activeProcessors,
                 this::onVideoSizeChanged,
                 this::onFrameReady,
                 this::onStatusChanged,
@@ -98,6 +120,9 @@ public class VideoPlayerController {
         view.showAudioEnabled(model.isAudioOutputEnabled());
         subtitlesEnabled = frameProcessors.stream()
                 .anyMatch(processor -> processor instanceof FrameSubtitler);
+        for (FrameSubtitler processor : subtitleProcessors) {
+            processor.setEnabled(subtitlesEnabled);
+        }
         view.showSubtitlesEnabled(subtitlesEnabled);
         view.getSubtitleButton().setOnAction(_ -> toggleSubtitles());
     }
@@ -168,6 +193,11 @@ public class VideoPlayerController {
     }
     private void toggleSubtitles() {
         subtitlesEnabled = !subtitlesEnabled;
+
+        for (FrameSubtitler processor : subtitleProcessors) {
+            processor.setEnabled(subtitlesEnabled);
+        }
+
         view.showSubtitlesEnabled(subtitlesEnabled);
     }
 
