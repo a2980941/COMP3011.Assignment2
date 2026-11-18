@@ -34,6 +34,7 @@ import javafx.scene.input.KeyEvent;
 public class VideoPlayerController {
     private final VideoPlayerModel model;
     private final VideoPlayerView view;
+    private boolean subtitlesEnabled;
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
 
     public VideoPlayerController(
@@ -58,6 +59,10 @@ public class VideoPlayerController {
         view.getStopButton().setOnAction(_ -> stopAndExit());
         view.getAudioButton().setOnAction(_ -> toggleAudioOutput());
         view.showAudioEnabled(model.isAudioOutputEnabled());
+        subtitlesEnabled = frameProcessors.stream()
+                .anyMatch(processor -> processor instanceof FrameSubtitler);
+        view.showSubtitlesEnabled(subtitlesEnabled);
+        view.getSubtitleButton().setOnAction(_ -> toggleSubtitles());
     }
 
     public void installKeyboardShortcuts(Scene scene) {
@@ -80,6 +85,10 @@ public class VideoPlayerController {
             } else if (event.getCode() == KeyCode.A) {
                 toggleAudioOutput();
                 event.consume();
+            }
+            else if (event.getCode() == KeyCode.S) {
+            toggleSubtitles();
+            event.consume();
             }
         });
     }
@@ -115,6 +124,10 @@ public class VideoPlayerController {
 
     private void toggleAudioOutput() {
         model.toggleAudioOutput();
+    }
+    private void toggleSubtitles() {
+        subtitlesEnabled = !subtitlesEnabled;
+        view.showSubtitlesEnabled(subtitlesEnabled);
     }
 
     private void stopAndExit() {

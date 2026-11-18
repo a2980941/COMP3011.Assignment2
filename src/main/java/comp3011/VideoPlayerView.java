@@ -59,6 +59,16 @@ public class VideoPlayerView {
     private final Button audioButton;
     private final Button subtitleButton;
 
+    public void showSubtitlesEnabled(boolean enabled) {
+        Label icon = new Label("CC");
+        icon.setStyle(enabled
+                ? "-fx-text-fill: black; -fx-font-weight: bold;"
+                : "-fx-text-fill: grey;");
+        subtitleButton.setGraphic(icon);
+        subtitleButton.setAccessibleText(
+                enabled ? "Subtitles on" : "Subtitles off");
+    }
+    
     public VideoPlayerView() {
         imageView.setPreserveRatio(true);
         imageView.setSmooth(false);
