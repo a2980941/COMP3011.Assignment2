@@ -57,11 +57,12 @@ public class VideoPlayerView {
     private final Button forwardFiveButton;
     private final Button stopButton;
     private final Button audioButton;
+    private final Button subtitleButton;
 
     public VideoPlayerView() {
         imageView.setPreserveRatio(true);
         imageView.setSmooth(false);
-
+        
         videoPane = new StackPane(imageView);
         videoPane.setStyle("-fx-background-color: black;");
         videoPane.setMinSize(0, 0);
@@ -75,6 +76,7 @@ public class VideoPlayerView {
         forwardFiveButton = iconButton(createLoopIcon(true, "5"));
         stopButton = iconButton(createStopIcon());
         audioButton = iconButton(createAudioIcon(false));
+        subtitleButton = iconButton(new Label("CC"));
         setPlaybackControlsDisabled(true);
 
         HBox controls = new HBox(
@@ -85,6 +87,7 @@ public class VideoPlayerView {
                 forwardFiveButton,
                 stopButton,
                 audioButton,
+                subtitleButton,
                 statusLabel);
 
         controls.setPadding(new Insets(10));
@@ -126,6 +129,9 @@ public class VideoPlayerView {
     public Button getAudioButton() {
         return audioButton;
     }
+    public Button getSubtitleButton() {
+        return subtitleButton;
+    }
 
     public void setStatus(String status) {
         statusLabel.setText(status);
@@ -158,6 +164,7 @@ public class VideoPlayerView {
         forwardFiveButton.setDisable(disabled);
         stopButton.setDisable(disabled);
         audioButton.setDisable(disabled);
+        subtitleButton.setDisable(disabled);
     }
 
     // There are a bunch of tooltip handling methods starting from here. We want to use tooltips so that people with
@@ -169,6 +176,7 @@ public class VideoPlayerView {
         setButtonTooltip(forwardFiveButton, "[RIGHT]");
         setButtonTooltip(stopButton, "[ESC]");
         setButtonTooltip(audioButton, "[A]");
+        setButtonTooltip(subtitleButton, "Subtitles [S]");
     }
 
     private void setButtonTooltip(Button button, String text) {
@@ -182,6 +190,7 @@ public class VideoPlayerView {
         });
         button.setOnMouseExited(_ -> hideTooltip());
         button.setOnMousePressed(_ -> hideTooltip());
+        
     }
 
     private void configureTooltipLabel() {
