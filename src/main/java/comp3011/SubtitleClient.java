@@ -8,8 +8,37 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.UUID;
+import java.nio.file.Files;
 
 public class SubtitleClient {
+	
+	public String requestSubtitlesWithRetry(Path audioPath)
+	        throws IOException, InterruptedException {
+
+	    long retryDelayMillis = 5000;
+
+	    while (true) {
+	        if (Thread.currentThread().isInterrupted()) {
+	            throw new InterruptedException("Subtitle request cancelled.");
+	        }
+
+	        try {
+	            return requestSubtitles(audioPath);
+	        } catch (IOException exception) {
+	            if (!Files.isReadable(audioPath)) {
+	                throw exception;
+	            }
+
+	            System.err.println(
+	                    "Subtitle request failed: " + exception
+	                    + ". Retrying in "
+	                    + retryDelayMillis / 1000 + " seconds.");
+
+	            Thread.sleep(retryDelayMillis);
+	            retryDelayMillis = Math.min(retryDelayMillis * 2, 30000);
+	        }
+	    }
+	}
 
     public String requestSubtitles(Path audioPath) throws IOException,
             InterruptedException {
@@ -43,10 +72,17 @@ public class SubtitleClient {
             HttpResponse<String> response = client.send(
                     request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() != 200) {
-                throw new IOException(
-                        "Subtitle server returned HTTP "
-                        + response.statusCode() + ": " + response.body());
+            int status = response.statusCode();
+
+            if (status != 200) {
+                String message = "Subtitle server returned HTTP "
+                        + status + ": " + response.body();
+
+                if (status == 408 || status == 429 || status >= 500) {
+                    throw new IOException(message);
+                }
+
+                throw new IllegalStateException(message);
             }
 
             return response.body();

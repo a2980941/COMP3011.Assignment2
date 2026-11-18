@@ -56,7 +56,7 @@ public class VideoPlayerController {
                     System.out.println(
                             "Audio extraction complete: "
                             + Files.size(audioPath) + " bytes");
-                    String subtitleJson = new SubtitleClient().requestSubtitles(audioPath);
+                    String subtitleJson = new SubtitleClient().requestSubtitlesWithRetry(audioPath);
                     List<SubtitleCue> cues = new SubtitleParser().parse(subtitleJson);
                     if (Thread.currentThread().isInterrupted()) {
                         return;
@@ -202,7 +202,7 @@ public class VideoPlayerController {
     }
 
     private void stopAndExit() {
-        model.stopPlayback();
+        shutdown();
         javafx.application.Platform.exit();
     }
 
