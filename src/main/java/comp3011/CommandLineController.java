@@ -159,6 +159,7 @@ public class CommandLineController {
             case "-m", "--mottle-frames" -> new FrameMottler();
             case "-b", "--bleed-frames" -> new FrameBleeder();
             case "-p", "--pepper-frames" -> new FramePepperer();
+            case "-S", "--subtitle-frames" -> new FrameSubtitler();
             default -> null;
         };
     }
@@ -193,6 +194,7 @@ public class CommandLineController {
         System.out.println("  -m, --mottle-frames    Add cloudy emulsion mottling");
         System.out.println("  -b, --bleed-frames     Bleed light into frames");
         System.out.println("  -p, --pepper-frames    Pepper frames with dark spots/blotches");
+        System.out.println("  -S, --subtitle-frames  Add speech to text subtitles to frames");
         System.out.println();
         System.out.println("Frame processors are applied in command-line order and may be repeated.");
         System.out.println("Example: -nssnfwyvdjmbp numbers, scratches twice, numbers again, flickers,");
