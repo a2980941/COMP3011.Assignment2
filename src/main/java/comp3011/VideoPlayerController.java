@@ -54,6 +54,9 @@ public class VideoPlayerController {
                     System.out.println(
                             "Audio extraction complete: "
                             + Files.size(audioPath) + " bytes");
+                    System.out.println("Requesting subtitles...");
+                    String subtitleJson = new SubtitleClient().requestSubtitles(audioPath);
+                    System.out.println("Subtitles received: " + subtitleJson);
                 } finally {
                     Files.deleteIfExists(audioPath);
                 }
