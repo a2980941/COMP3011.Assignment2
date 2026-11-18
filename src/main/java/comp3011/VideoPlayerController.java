@@ -46,41 +46,67 @@ public class VideoPlayerController {
             subtitleTask.interrupt();
         }
 
-        subtitleTask = Thread.ofVirtual().start(() -> {
+        for (FrameSubtitler processor : subtitleProcessors) {
+            processor.setCues(List.of());
+        }
+
+        subtitleTask = Thread.ofVirtual().unstarted(() -> {
+            List<SubtitleCue> allCues = new ArrayList<>();
+            SubtitleClient client = new SubtitleClient();
+            SubtitleParser parser = new SubtitleParser();
+            Thread currentTask = Thread.currentThread();
+
             try {
-                var audioPath = Files.createTempFile("subtitle-audio-", ".wav");
-
-                try {
-                	System.out.println("Starting audio extraction: " + videoFile.getAbsolutePath());
-                    new AudioExtractor().extract(videoFile, audioPath.toFile());
+                new AudioExtractor().extractChunks(videoFile, chunk -> {
                     System.out.println(
-                            "Audio extraction complete: "
-                            + Files.size(audioPath) + " bytes");
-                    String subtitleJson = new SubtitleClient().requestSubtitlesWithRetry(audioPath);
-                    List<SubtitleCue> cues = new SubtitleParser().parse(subtitleJson);
-                    if (Thread.currentThread().isInterrupted()) {
-                        return;
+                            "Uploading audio chunk starting at "
+                            + chunk.startSeconds() + " seconds.");
+
+                    String json = client.requestSubtitlesWithRetry(
+                            chunk.audioPath());
+
+                    List<SubtitleCue> chunkCues = parser.parse(json);
+
+                    if (currentTask.isInterrupted()) {
+                        throw new InterruptedException(
+                                "Subtitle preparation cancelled.");
                     }
 
-                    for (FrameSubtitler processor : subtitleProcessors) {
-                        processor.setCues(cues);
+                    for (SubtitleCue cue : chunkCues) {
+                        allCues.add(new SubtitleCue(
+                                cue.startSeconds() + chunk.startSeconds(),
+                                cue.endSeconds() + chunk.startSeconds(),
+                                cue.text()));
                     }
 
-                    System.out.println("Parsed " + cues.size() + " subtitle cues.");
-                    for (SubtitleCue cue : cues) {
-                        System.out.println(cue);
-                    }
-                    System.out.println("Subtitles received: " + subtitleJson);
-                } finally {
-                    Files.deleteIfExists(audioPath);
-                }
+                    List<SubtitleCue> availableCues = List.copyOf(allCues);
+
+                    javafx.application.Platform.runLater(() -> {
+                        if (subtitleTask == currentTask
+                                && !currentTask.isInterrupted()) {
+                            for (FrameSubtitler processor : subtitleProcessors) {
+                                processor.setCues(availableCues);
+                            }
+                        }
+                    });
+
+                    System.out.println(
+                            "Chunk processed. Total captions available: "
+                            + availableCues.size());
+                });
+
+                System.out.println("All audio chunks processed.");
+
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
             } catch (Exception exception) {
                 System.err.println(
-                        "Subtitle preparation failed: " + exception.getMessage());
+                        "Subtitle preparation failed: " + exception);
+                exception.printStackTrace();
             }
         });
+
+        subtitleTask.start();
     }
     
     public VideoPlayerController(
