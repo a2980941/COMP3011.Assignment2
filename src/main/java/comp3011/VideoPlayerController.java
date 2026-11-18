@@ -54,8 +54,13 @@ public class VideoPlayerController {
                     System.out.println(
                             "Audio extraction complete: "
                             + Files.size(audioPath) + " bytes");
-                    System.out.println("Requesting subtitles...");
                     String subtitleJson = new SubtitleClient().requestSubtitles(audioPath);
+                    List<SubtitleCue> cues = new SubtitleParser().parse(subtitleJson);
+
+                    System.out.println("Parsed " + cues.size() + " subtitle cues.");
+                    for (SubtitleCue cue : cues) {
+                        System.out.println(cue);
+                    }
                     System.out.println("Subtitles received: " + subtitleJson);
                 } finally {
                     Files.deleteIfExists(audioPath);
